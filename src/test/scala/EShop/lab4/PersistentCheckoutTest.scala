@@ -1,9 +1,9 @@
 package EShop.lab4
 
-import EShop.lab2.TypedCartActor
-import EShop.lab3.OrderManager
+import EShop.lab2.{TypedCartActor, TypedCheckout}
+import EShop.lab3.{OrderManager, Payment}
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
-import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit
+import akka.persistence.testkit.scaladsl.{EventSourcedBehaviorTestKit, PersistenceTestKit}
 import akka.persistence.testkit.scaladsl.EventSourcedBehaviorTestKit.SerializationSettings
 import akka.persistence.typed.PersistenceId
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach}
@@ -14,9 +14,9 @@ import scala.util.Random
 
 class PersistentCheckoutTest
   extends ScalaTestWithActorTestKit(EventSourcedBehaviorTestKit.config)
-  with AnyFlatSpecLike
-  with BeforeAndAfterAll
-  with BeforeAndAfterEach {
+    with AnyFlatSpecLike
+    with BeforeAndAfterAll
+    with BeforeAndAfterEach {
 
   override def afterAll: Unit = testKit.shutdownTestKit()
 
@@ -24,20 +24,26 @@ class PersistentCheckoutTest
 
   private val cartActorProbe = testKit.createTestProbe[TypedCartActor.Command]()
 
-  private val orderManagerProbe = testKit.createTestProbe[OrderManager.Command]
+  private val managerCheckoutMapperProbe = testKit.createTestProbe[TypedCheckout.Event]()
+
+  private val managerPaymentMapperProbe  = testKit.createTestProbe[Payment.Event]()
+
+  private val persistenceId = PersistenceId.ofUniqueId("PersistentCheckout")
 
   private val eventSourcedTestKit =
     EventSourcedBehaviorTestKit[Command, Event, State](
       system,
       new PersistentCheckout {
         override val timerDuration: FiniteDuration = 1.second
-      }.apply(cartActorProbe.ref, generatePersistenceId),
+      }.apply(cartActorProbe.ref, persistenceId),
       SerializationSettings.disabled
     )
+  private val persistenceTestKit = PersistenceTestKit(system)
 
   override protected def beforeEach(): Unit = {
     super.beforeEach()
     eventSourcedTestKit.clear()
+    persistenceTestKit.clearAll()
   }
 
   val deliveryMethod = "post"
@@ -120,7 +126,7 @@ class PersistentCheckoutTest
 
     Thread.sleep(2000)
 
-    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, orderManagerProbe.ref))
+    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref))
 
     resultSelectPayment.hasNoEvents shouldBe true
     resultSelectPayment.state shouldBe Cancelled
@@ -137,7 +143,7 @@ class PersistentCheckoutTest
     resultSelectDelivery.event.isInstanceOf[DeliveryMethodSelected] shouldBe true
     resultSelectDelivery.state.isInstanceOf[SelectingPaymentMethod] shouldBe true
 
-    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, orderManagerProbe.ref))
+    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref))
 
     resultSelectPayment.event.isInstanceOf[PaymentStarted] shouldBe true
     resultSelectPayment.state.isInstanceOf[ProcessingPayment] shouldBe true
@@ -154,7 +160,7 @@ class PersistentCheckoutTest
     resultSelectDelivery.event.isInstanceOf[DeliveryMethodSelected] shouldBe true
     resultSelectDelivery.state.isInstanceOf[SelectingPaymentMethod] shouldBe true
 
-    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, orderManagerProbe.ref))
+    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref))
 
     resultSelectPayment.event.isInstanceOf[PaymentStarted] shouldBe true
     resultSelectPayment.state.isInstanceOf[ProcessingPayment] shouldBe true
@@ -176,7 +182,7 @@ class PersistentCheckoutTest
     resultSelectDelivery.event.isInstanceOf[DeliveryMethodSelected] shouldBe true
     resultSelectDelivery.state.isInstanceOf[SelectingPaymentMethod] shouldBe true
 
-    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, orderManagerProbe.ref))
+    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref))
 
     resultSelectPayment.event.isInstanceOf[PaymentStarted] shouldBe true
     resultSelectPayment.state.isInstanceOf[ProcessingPayment] shouldBe true
@@ -200,7 +206,7 @@ class PersistentCheckoutTest
     resultSelectDelivery.event.isInstanceOf[DeliveryMethodSelected] shouldBe true
     resultSelectDelivery.state.isInstanceOf[SelectingPaymentMethod] shouldBe true
 
-    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, orderManagerProbe.ref))
+    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref))
 
     resultSelectPayment.event.isInstanceOf[PaymentStarted] shouldBe true
     resultSelectPayment.state.isInstanceOf[ProcessingPayment] shouldBe true
@@ -222,7 +228,7 @@ class PersistentCheckoutTest
     resultSelectDelivery.event.isInstanceOf[DeliveryMethodSelected] shouldBe true
     resultSelectDelivery.state.isInstanceOf[SelectingPaymentMethod] shouldBe true
 
-    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, orderManagerProbe.ref))
+    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref))
 
     resultSelectPayment.event.isInstanceOf[PaymentStarted] shouldBe true
     resultSelectPayment.state.isInstanceOf[ProcessingPayment] shouldBe true
@@ -237,4 +243,12 @@ class PersistentCheckoutTest
     resultCancelCheckout.hasNoEvents shouldBe true
     resultCancelCheckout.state shouldBe Closed
   }
+
+  it should "recover after stopping in checkout state" in {
+    eventSourcedTestKit.runCommand(StartCheckout)
+    persistenceTestKit.expectNextPersisted(persistenceId.id, CheckoutStarted)
+    eventSourcedTestKit.restart()
+    eventSourcedTestKit.getState().isInstanceOf[SelectingDelivery] shouldBe true
+  }
+
 }

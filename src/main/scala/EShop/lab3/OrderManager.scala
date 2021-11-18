@@ -35,7 +35,7 @@ class OrderManager {
       }
 
       checkoutMapper = context.messageAdapter {
-        case TypedCheckout.PaymentStarted(paymentRef) => ConfirmPaymentStarted(paymentRef)
+        case TypedCheckout.PaymentStarted(paymentRef, _) => ConfirmPaymentStarted(paymentRef)
       }
 
       paymentMapper = context.messageAdapter {
