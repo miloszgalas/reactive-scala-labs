@@ -33,7 +33,7 @@ class TypedCheckoutTest
 
     val paymentStarted = managerCheckoutMapperProbe.expectMessageType[TypedCheckout.PaymentStarted]
 
-    paymentStarted.paymentRef ! Payment.DoPayment
+    paymentStarted.payment ! Payment.DoPayment
     managerPaymentMapperProbe.expectMessage(Payment.PaymentReceived)
 
     cartProbe.expectMessage(TypedCartActor.ConfirmCheckoutClosed)

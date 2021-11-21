@@ -88,7 +88,7 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
   }
 
   it should "be in cancelled state after expire checkout timeout in selectingPayment state" in {
-    val probe             = testKit.createTestProbe[String]
+    val probe                      = testKit.createTestProbe[String]
     val managerCheckoutMapperProbe = testKit.createTestProbe[TypedCheckout.Event]
     val managerPaymentMapperProbe  = testKit.createTestProbe[Payment.Event]
     val checkoutActor = testKit.spawn {
@@ -112,11 +112,11 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
   }
 
   it should "be in processingPayment state after payment selected" in {
-    val probe             = testKit.createTestProbe[String]
+    val probe                      = testKit.createTestProbe[String]
     val managerCheckoutMapperProbe = testKit.createTestProbe[TypedCheckout.Event]
     val managerPaymentMapperProbe  = testKit.createTestProbe[Payment.Event]
-    val cartActorProbe    = testKit.createTestProbe[TypedCartActor.Command]
-    val checkoutActor     = checkoutActorWithResponseOnStateChange(testKit, probe.ref, cartActorProbe.ref)
+    val cartActorProbe             = testKit.createTestProbe[TypedCartActor.Command]
+    val checkoutActor              = checkoutActorWithResponseOnStateChange(testKit, probe.ref, cartActorProbe.ref)
 
     probe.expectMessage(emptyMsg)
     checkoutActor ! StartCheckout
@@ -128,11 +128,11 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
   }
 
   it should "be in cancelled state after cancel message received in processingPayment State" in {
-    val probe             = testKit.createTestProbe[String]
-    val cartActorProbe    = testKit.createTestProbe[TypedCartActor.Command]
+    val probe                      = testKit.createTestProbe[String]
+    val cartActorProbe             = testKit.createTestProbe[TypedCartActor.Command]
     val managerCheckoutMapperProbe = testKit.createTestProbe[TypedCheckout.Event]
     val managerPaymentMapperProbe  = testKit.createTestProbe[Payment.Event]
-    val checkoutActor     = checkoutActorWithResponseOnStateChange(testKit, probe.ref, cartActorProbe.ref)
+    val checkoutActor              = checkoutActorWithResponseOnStateChange(testKit, probe.ref, cartActorProbe.ref)
 
     probe.expectMessage(emptyMsg)
     checkoutActor ! StartCheckout
@@ -146,7 +146,7 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
   }
 
   it should "be in cancelled state after expire checkout timeout in processingPayment state" in {
-    val probe             = testKit.createTestProbe[String]
+    val probe                      = testKit.createTestProbe[String]
     val managerCheckoutMapperProbe = testKit.createTestProbe[TypedCheckout.Event]
     val managerPaymentMapperProbe  = testKit.createTestProbe[Payment.Event]
     val checkoutActor = testKit.spawn {
@@ -171,11 +171,11 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
   }
 
   it should "be in closed state after payment completed" in {
-    val probe             = testKit.createTestProbe[String]()
-    val cartActorProbe    = testKit.createTestProbe[TypedCartActor.Command]
+    val probe                      = testKit.createTestProbe[String]()
+    val cartActorProbe             = testKit.createTestProbe[TypedCartActor.Command]
     val managerCheckoutMapperProbe = testKit.createTestProbe[TypedCheckout.Event]
     val managerPaymentMapperProbe  = testKit.createTestProbe[Payment.Event]
-    val checkoutActor     = checkoutActorWithResponseOnStateChange(testKit, probe.ref, cartActorProbe.ref)
+    val checkoutActor              = checkoutActorWithResponseOnStateChange(testKit, probe.ref, cartActorProbe.ref)
 
     probe.expectMessage(emptyMsg)
     checkoutActor ! StartCheckout
@@ -189,11 +189,11 @@ class TypedCheckoutTest extends ScalaTestWithActorTestKit with AnyFlatSpecLike w
   }
 
   it should "not change state after cancel msg in completed state" in {
-    val probe             = testKit.createTestProbe[String]()
-    val cartActorProbe    = testKit.createTestProbe[TypedCartActor.Command]
+    val probe                      = testKit.createTestProbe[String]()
+    val cartActorProbe             = testKit.createTestProbe[TypedCartActor.Command]
     val managerCheckoutMapperProbe = testKit.createTestProbe[TypedCheckout.Event]
     val managerPaymentMapperProbe  = testKit.createTestProbe[Payment.Event]
-    val checkoutActor     = checkoutActorWithResponseOnStateChange(testKit, probe.ref, cartActorProbe.ref)
+    val checkoutActor              = checkoutActorWithResponseOnStateChange(testKit, probe.ref, cartActorProbe.ref)
 
     probe.expectMessage(emptyMsg)
     checkoutActor ! StartCheckout
@@ -228,41 +228,41 @@ object TypedCheckoutTest {
       val checkout = new TypedCheckout(cartActorProbe) {
 
         override def start: Behavior[TypedCheckout.Command] =
-          Behaviors.setup(_ => {
+          Behaviors.setup { _ =>
             probe ! emptyMsg
             super.start
-          })
+          }
 
         override def selectingDelivery(timer: Cancellable): Behavior[TypedCheckout.Command] =
-          Behaviors.setup(_ => {
+          Behaviors.setup { _ =>
             val result = super.selectingDelivery(timer)
             probe ! selectingDeliveryMsg
             result
-          })
+          }
 
         override def selectingPaymentMethod(timer: Cancellable): Behavior[TypedCheckout.Command] =
-          Behaviors.setup(_ => {
+          Behaviors.setup { _ =>
             probe ! selectingPaymentMethodMsg
             super.selectingPaymentMethod(timer)
-          })
+          }
 
         override def processingPayment(timer: Cancellable): Behavior[TypedCheckout.Command] =
-          Behaviors.setup(_ => {
+          Behaviors.setup { _ =>
             probe ! processingPaymentMsg
             super.processingPayment(timer)
-          })
+          }
 
         override def cancelled: Behavior[TypedCheckout.Command] =
-          Behaviors.setup(_ => {
+          Behaviors.setup { _ =>
             probe ! cancelledMsg
             super.cancelled
-          })
+          }
 
         override def closed: Behavior[TypedCheckout.Command] =
-          Behaviors.setup(_ => {
+          Behaviors.setup { _ =>
             probe ! closedMsg
             super.closed
-          })
+          }
       }
       checkout.start
     }
