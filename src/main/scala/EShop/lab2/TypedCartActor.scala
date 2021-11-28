@@ -8,20 +8,22 @@ import scala.language.postfixOps
 import scala.concurrent.duration._
 import EShop.lab3.OrderManager
 
+import java.time.Instant
+
 object TypedCartActor {
 
   sealed trait Command
-  case class AddItem(item: Any)                                             extends Command
-  case class RemoveItem(item: Any)                                          extends Command
-  case object ExpireCart                                                    extends Command
+  case class AddItem(item: Any)                              extends Command
+  case class RemoveItem(item: Any)                           extends Command
+  case object ExpireCart                                     extends Command
   case class StartCheckout(orderManagerRef: ActorRef[Event]) extends Command
-  case object ConfirmCheckoutCancelled                                      extends Command
-  case object ConfirmCheckoutClosed                                         extends Command
-  case class GetItems(sender: ActorRef[Cart])                               extends Command
+  case object ConfirmCheckoutCancelled                       extends Command
+  case object ConfirmCheckoutClosed                          extends Command
+  case class GetItems(sender: ActorRef[Cart])                extends Command
 
   sealed trait Event
   case class CheckoutStarted(checkoutRef: ActorRef[TypedCheckout.Command]) extends Event
-  case class ItemAdded(item: Any)                                          extends Event
+  case class ItemAdded(item: Any)           extends Event
   case class ItemRemoved(item: Any)                                        extends Event
   case object CartEmptied                                                  extends Event
   case object CartExpired                                                  extends Event
@@ -51,8 +53,8 @@ class TypedCartActor {
 
   def start: Behavior[TypedCartActor.Command] = empty
 
-  def empty: Behavior[TypedCartActor.Command] = Behaviors.receive(
-    (context, msg) =>
+  def empty: Behavior[TypedCartActor.Command] =
+    Behaviors.receive((context, msg) =>
       msg match {
         case AddItem(item) =>
           nonEmpty(Cart(Seq(item)), scheduleTimer(context))
@@ -60,10 +62,10 @@ class TypedCartActor {
           sender ! Cart.empty
           Behaviors.same
       }
-  )
+    )
 
-  def nonEmpty(cart: Cart, timer: Cancellable): Behavior[TypedCartActor.Command] = Behaviors.receive(
-    (context, msg) =>
+  def nonEmpty(cart: Cart, timer: Cancellable): Behavior[TypedCartActor.Command] =
+    Behaviors.receive((context, msg) =>
       msg match {
         case AddItem(item) =>
           cart.addItem(item)
@@ -73,9 +75,8 @@ class TypedCartActor {
           if (newCart.size == 0) {
             timer.cancel()
             empty
-          } else {
+          } else
             Behaviors.same
-          }
         case ExpireCart =>
           timer.cancel()
           empty
@@ -89,16 +90,16 @@ class TypedCartActor {
           sender ! cart
           Behaviors.same
       }
-  )
+    )
 
-  def inCheckout(cart: Cart): Behavior[TypedCartActor.Command] = Behaviors.receive(
-    (context, msg) =>
+  def inCheckout(cart: Cart): Behavior[TypedCartActor.Command] =
+    Behaviors.receive((context, msg) =>
       msg match {
         case ConfirmCheckoutCancelled =>
           nonEmpty(cart, scheduleTimer(context))
         case ConfirmCheckoutClosed =>
           empty
       }
-  )
+    )
 
 }

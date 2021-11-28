@@ -8,6 +8,8 @@ import scala.language.postfixOps
 import scala.concurrent.duration._
 import EShop.lab3.{OrderManager, Payment}
 
+import java.time.Instant
+
 object TypedCheckout {
   def apply(cartActor: ActorRef[TypedCartActor.Command]): Behavior[Command] =
     Behaviors.setup(context => new TypedCheckout(cartActor).start)
@@ -31,10 +33,10 @@ object TypedCheckout {
   case object ConfirmPaymentReceived extends Command
 
   sealed trait Event
-  case object CheckOutClosed                                    extends Event
+  case object CheckOutClosed                                                        extends Event
   case class PaymentStarted(payment: ActorRef[Payment.Command]) extends Event
-  case object CheckoutStarted                                   extends Event
-  case object CheckoutCancelled                                 extends Event
+  case object CheckoutStarted                                                       extends Event
+  case object CheckoutCancelled                                                     extends Event
   case class DeliveryMethodSelected(method: String)             extends Event
 
   sealed abstract class State(val timerOpt: Option[Cancellable])
