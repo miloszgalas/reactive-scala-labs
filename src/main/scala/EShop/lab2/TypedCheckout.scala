@@ -34,10 +34,10 @@ object TypedCheckout {
 
   sealed trait Event
   case object CheckOutClosed                                                        extends Event
-  case class PaymentStarted(payment: ActorRef[Payment.Command], startTime: Instant) extends Event
-  case class CheckoutStarted(startTime: Instant)                                    extends Event
+  case class PaymentStarted(payment: ActorRef[Payment.Command]) extends Event
+  case object CheckoutStarted                                                       extends Event
   case object CheckoutCancelled                                                     extends Event
-  case class DeliveryMethodSelected(method: String, startTime: Instant)             extends Event
+  case class DeliveryMethodSelected(method: String)             extends Event
 
   sealed abstract class State(val timerOpt: Option[Cancellable])
   case object WaitingForStart                           extends State(None)
@@ -82,7 +82,7 @@ class TypedCheckout(
         case SelectPayment(payment, managerPaymentMapper, managerCheckoutMapper) =>
           timer.cancel()
           val paymentRef = context.spawn(Payment(payment, managerPaymentMapper, context.self), "payment")
-          managerCheckoutMapper ! PaymentStarted(paymentRef, null)
+          managerCheckoutMapper ! PaymentStarted(paymentRef)
           processingPayment(context.scheduleOnce(paymentTimerDuration, context.self, ExpirePayment))
         case CancelCheckout =>
           cancelled

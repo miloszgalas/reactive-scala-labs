@@ -1,15 +1,12 @@
 package EShop.lab4
 
 import EShop.lab2.{Cart, TypedCheckout}
-import EShop.lab3.OrderManager
 import akka.actor.Cancellable
 import akka.actor.typed.Behavior
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior}
 
-import java.time.Instant
-import java.time.temporal.ChronoUnit
 import scala.concurrent.duration._
 
 class PersistentCartActor {
@@ -18,8 +15,8 @@ class PersistentCartActor {
 
   val cartTimerDuration: FiniteDuration = 5.seconds
 
-  private def scheduleTimer(context: ActorContext[Command], duration: FiniteDuration): Cancellable =
-    context.scheduleOnce(duration, context.self, ExpireCart)
+  private def scheduleTimer(context: ActorContext[Command]): Cancellable =
+    context.scheduleOnce(cartTimerDuration, context.self, ExpireCart)
 
   def apply(persistenceId: PersistenceId): Behavior[Command] =
     Behaviors.setup { context =>
@@ -36,14 +33,14 @@ class PersistentCartActor {
       state match {
         case Empty =>
           command match {
-            case AddItem(item)    => Effect.persist(ItemAdded(item, Some(Instant.now())))
+            case AddItem(item)    => Effect.persist(ItemAdded(item))
             case GetItems(sender) => Effect.reply(sender)(Cart.empty)
             case _                => Effect.unhandled
           }
 
         case NonEmpty(cart, _) =>
           command match {
-            case AddItem(item)    => Effect.persist(ItemAdded(item, None))
+            case AddItem(item)    => Effect.persist(ItemAdded(item))
             case GetItems(sender) => Effect.reply(sender)(cart)
             case ExpireCart       => Effect.persist(CartExpired)
             case RemoveItem(item) =>
@@ -63,7 +60,7 @@ class PersistentCartActor {
         case InCheckout(_) =>
           command match {
             case ConfirmCheckoutClosed    => Effect.persist(CheckoutClosed)
-            case ConfirmCheckoutCancelled => Effect.persist(CheckoutCancelled(Instant.now()))
+            case ConfirmCheckoutCancelled => Effect.persist(CheckoutCancelled)
             case _                        => Effect.unhandled
           }
       }
@@ -71,10 +68,6 @@ class PersistentCartActor {
 
   def eventHandler(context: ActorContext[Command]): (State, Event) => State =
     (state, event) => {
-
-      def startTimer(startTime: Instant): Cancellable =
-        scheduleTimer(context, cartTimerDuration - ChronoUnit.MILLIS.between(startTime, Instant.now()).milliseconds)
-
       event match {
         case CheckoutStarted(_) =>
           state.timerOpt match {
@@ -82,17 +75,28 @@ class PersistentCartActor {
             case _           =>
           }
           InCheckout(state.cart)
-        case ItemAdded(item, Some(startTime)) => NonEmpty(state.cart.addItem(item), startTimer(startTime))
-        case ItemAdded(item, _)               => NonEmpty(state.cart.addItem(item), null)
-        case ItemRemoved(item)                => NonEmpty(state.cart.removeItem(item), null)
+        case ItemAdded(item) =>
+          state.timerOpt match {
+            case Some(timer) => timer.cancel()
+            case _           =>
+          }
+          NonEmpty(state.cart.addItem(item), scheduleTimer(context))
+        case ItemRemoved(item) =>
+          state.timerOpt match {
+            case Some(timer) => timer.cancel()
+            case _           =>
+          }
+          val cartWithItemRemoved = state.cart.removeItem(item)
+          NonEmpty(cartWithItemRemoved, state.timerOpt.get)
         case CartEmptied | CartExpired =>
           state.timerOpt match {
             case Some(timer) => timer.cancel()
             case _           =>
           }
           Empty
-        case CheckoutClosed               => Empty
-        case CheckoutCancelled(startTime) => NonEmpty(state.cart, startTimer(startTime))
+        case CheckoutClosed    => Empty
+        case CheckoutCancelled => NonEmpty(state.cart, scheduleTimer(context))
       }
     }
+
 }
