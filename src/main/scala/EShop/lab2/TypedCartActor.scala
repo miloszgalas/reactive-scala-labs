@@ -23,12 +23,12 @@ object TypedCartActor {
 
   sealed trait Event
   case class CheckoutStarted(checkoutRef: ActorRef[TypedCheckout.Command]) extends Event
-  case class ItemAdded(item: Any, startTimeOpt: Option[Instant])           extends Event
+  case class ItemAdded(item: Any)           extends Event
   case class ItemRemoved(item: Any)                                        extends Event
   case object CartEmptied                                                  extends Event
   case object CartExpired                                                  extends Event
   case object CheckoutClosed                                               extends Event
-  case class CheckoutCancelled(startTime: Instant)                         extends Event
+  case object CheckoutCancelled                                            extends Event
 
   sealed abstract class State(val timerOpt: Option[Cancellable]) {
     def cart: Cart
