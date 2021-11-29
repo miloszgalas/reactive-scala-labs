@@ -37,21 +37,19 @@ object ProductCatalogRestServerApp extends App {
 
 case class ProductCatalogRest(queryRef: ActorRef[ProductCatalog.Query])(implicit val scheduler: Scheduler)
   extends ProductCatalogJsonSupport {
-  implicit val timeout: Timeout = 3 .second
+  implicit val timeout: Timeout = 3.second
 
   def routes: Route = {
     path("products") {
       get {
-        parameters(Symbol("keywords").as[String]) { keywords =>
-          parameter(Symbol("brand").as[String]) { brand =>
-            complete {
-              val items =
-                queryRef
-                  .ask(ref => ProductCatalog.GetItems(brand, keywords.split(" ").toList, ref))
-                  .mapTo[ProductCatalog.Items]
+        parameter(Symbol("brand").as[String], Symbol("keywords").as[String]) { (brand, keywords) =>
+          complete {
+            val items =
+              queryRef
+                .ask(ref => ProductCatalog.GetItems(brand, keywords.split(" ").toList, ref))
+                .mapTo[ProductCatalog.Items]
 
-              Future.successful(items)
-            }
+            Future.successful(items)
           }
         }
       }
@@ -68,11 +66,11 @@ object ProductCatalogRestServer {
       implicit val timeout: Timeout             = 3.second
 
       system.receptionist ! Receptionist.subscribe(ProductCatalog.ProductCatalogServiceKey, context.self)
-      Behaviors.receiveMessage[Receptionist.Listing](msg => {
+      Behaviors.receiveMessage[Receptionist.Listing] { msg =>
         val listing = msg.serviceInstances(ProductCatalog.ProductCatalogServiceKey)
-        if (listing.isEmpty) {
+        if (listing.isEmpty)
           Behaviors.same
-        } else {
+        else {
           val queryRef = listing.head
           val rest     = ProductCatalogRest(queryRef)
           val binding  = Http().newServerAt("localhost", port).bind(rest.routes)
@@ -81,7 +79,7 @@ object ProductCatalogRestServer {
           println(s"Binding is done. $res")
           Behaviors.empty
         }
-      })
+      }
     }
   }
 
