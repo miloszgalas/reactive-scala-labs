@@ -14,9 +14,9 @@ import scala.util.Random
 
 class PersistentCheckoutTest
   extends ScalaTestWithActorTestKit(EventSourcedBehaviorTestKit.config)
-    with AnyFlatSpecLike
-    with BeforeAndAfterAll
-    with BeforeAndAfterEach {
+  with AnyFlatSpecLike
+  with BeforeAndAfterAll
+  with BeforeAndAfterEach {
 
   override def afterAll: Unit = testKit.shutdownTestKit()
 
@@ -26,7 +26,7 @@ class PersistentCheckoutTest
 
   private val managerCheckoutMapperProbe = testKit.createTestProbe[TypedCheckout.Event]()
 
-  private val managerPaymentMapperProbe  = testKit.createTestProbe[Payment.Event]()
+  private val managerPaymentMapperProbe = testKit.createTestProbe[Payment.Event]()
 
   private val persistenceId = PersistenceId.ofUniqueId("PersistentCheckout")
 
@@ -126,7 +126,9 @@ class PersistentCheckoutTest
 
     Thread.sleep(2000)
 
-    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref))
+    val resultSelectPayment = eventSourcedTestKit.runCommand(
+      SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref)
+    )
 
     resultSelectPayment.hasNoEvents shouldBe true
     resultSelectPayment.state shouldBe Cancelled
@@ -143,7 +145,9 @@ class PersistentCheckoutTest
     resultSelectDelivery.event.isInstanceOf[DeliveryMethodSelected] shouldBe true
     resultSelectDelivery.state.isInstanceOf[SelectingPaymentMethod] shouldBe true
 
-    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref))
+    val resultSelectPayment = eventSourcedTestKit.runCommand(
+      SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref)
+    )
 
     resultSelectPayment.event.isInstanceOf[PaymentStarted] shouldBe true
     resultSelectPayment.state.isInstanceOf[ProcessingPayment] shouldBe true
@@ -160,7 +164,9 @@ class PersistentCheckoutTest
     resultSelectDelivery.event.isInstanceOf[DeliveryMethodSelected] shouldBe true
     resultSelectDelivery.state.isInstanceOf[SelectingPaymentMethod] shouldBe true
 
-    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref))
+    val resultSelectPayment = eventSourcedTestKit.runCommand(
+      SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref)
+    )
 
     resultSelectPayment.event.isInstanceOf[PaymentStarted] shouldBe true
     resultSelectPayment.state.isInstanceOf[ProcessingPayment] shouldBe true
@@ -182,7 +188,9 @@ class PersistentCheckoutTest
     resultSelectDelivery.event.isInstanceOf[DeliveryMethodSelected] shouldBe true
     resultSelectDelivery.state.isInstanceOf[SelectingPaymentMethod] shouldBe true
 
-    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref))
+    val resultSelectPayment = eventSourcedTestKit.runCommand(
+      SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref)
+    )
 
     resultSelectPayment.event.isInstanceOf[PaymentStarted] shouldBe true
     resultSelectPayment.state.isInstanceOf[ProcessingPayment] shouldBe true
@@ -206,7 +214,9 @@ class PersistentCheckoutTest
     resultSelectDelivery.event.isInstanceOf[DeliveryMethodSelected] shouldBe true
     resultSelectDelivery.state.isInstanceOf[SelectingPaymentMethod] shouldBe true
 
-    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref))
+    val resultSelectPayment = eventSourcedTestKit.runCommand(
+      SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref)
+    )
 
     resultSelectPayment.event.isInstanceOf[PaymentStarted] shouldBe true
     resultSelectPayment.state.isInstanceOf[ProcessingPayment] shouldBe true
@@ -228,7 +238,9 @@ class PersistentCheckoutTest
     resultSelectDelivery.event.isInstanceOf[DeliveryMethodSelected] shouldBe true
     resultSelectDelivery.state.isInstanceOf[SelectingPaymentMethod] shouldBe true
 
-    val resultSelectPayment = eventSourcedTestKit.runCommand(SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref))
+    val resultSelectPayment = eventSourcedTestKit.runCommand(
+      SelectPayment(paymentMethod, managerPaymentMapperProbe.ref, managerCheckoutMapperProbe.ref)
+    )
 
     resultSelectPayment.event.isInstanceOf[PaymentStarted] shouldBe true
     resultSelectPayment.state.isInstanceOf[ProcessingPayment] shouldBe true

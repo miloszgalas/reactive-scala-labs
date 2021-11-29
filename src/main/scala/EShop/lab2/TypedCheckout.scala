@@ -28,9 +28,10 @@ object TypedCheckout {
     payment: String,
     managerPaymentMapper: ActorRef[Payment.Event],
     managerCheckoutMapper: ActorRef[Event]
-  )                                  extends Command
+  ) extends Command
   case object ExpirePayment          extends Command
   case object ConfirmPaymentReceived extends Command
+  case object PaymentRejected        extends Command
 
   sealed trait Event
   case object CheckOutClosed                                                        extends Event
@@ -57,22 +58,24 @@ class TypedCheckout(
   val paymentTimerDuration: FiniteDuration  = 1 seconds
 
   def start: Behavior[TypedCheckout.Command] =
-    Behaviors.receive((context, msg) =>
-      msg match {
-        case StartCheckout =>
-          selectingDelivery(context.scheduleOnce(checkoutTimerDuration, context.self, ExpireCheckout))
+    Behaviors.receive(
+      (context, msg) =>
+        msg match {
+          case StartCheckout =>
+            selectingDelivery(context.scheduleOnce(checkoutTimerDuration, context.self, ExpireCheckout))
       }
     )
 
   def selectingDelivery(timer: Cancellable): Behavior[TypedCheckout.Command] =
-    Behaviors.receive((_, msg) =>
-      msg match {
-        case SelectDeliveryMethod(_) =>
-          selectingPaymentMethod(timer)
-        case CancelCheckout =>
-          cancelled
-        case ExpireCheckout =>
-          cancelled
+    Behaviors.receive(
+      (_, msg) =>
+        msg match {
+          case SelectDeliveryMethod(_) =>
+            selectingPaymentMethod(timer)
+          case CancelCheckout =>
+            cancelled
+          case ExpireCheckout =>
+            cancelled
       }
     )
 
@@ -92,18 +95,23 @@ class TypedCheckout(
     )
 
   def processingPayment(timer: Cancellable): Behavior[TypedCheckout.Command] =
-    Behaviors.receive((_, msg) =>
-      msg match {
-        case ExpirePayment =>
-          cartActor ! TypedCartActor.ConfirmCheckoutCancelled
-          cancelled
-        case CancelCheckout =>
-          cartActor ! TypedCartActor.ConfirmCheckoutCancelled
-          cancelled
-        case ConfirmPaymentReceived =>
-          timer.cancel()
-          cartActor ! TypedCartActor.ConfirmCheckoutClosed
-          closed
+    Behaviors.receive(
+      (_, msg) =>
+        msg match {
+          case ExpirePayment =>
+            cartActor ! TypedCartActor.ConfirmCheckoutCancelled
+            cancelled
+          case CancelCheckout =>
+            cartActor ! TypedCartActor.ConfirmCheckoutCancelled
+            cancelled
+          case ConfirmPaymentReceived =>
+            timer.cancel()
+            cartActor ! TypedCartActor.ConfirmCheckoutClosed
+            closed
+          case PaymentRejected =>
+            timer.cancel()
+            cartActor ! TypedCartActor.ConfirmCheckoutCancelled
+            cancelled
       }
     )
 
